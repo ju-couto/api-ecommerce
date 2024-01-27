@@ -23,6 +23,7 @@ class Product(Base):
     price = Column(DECIMAL(10,2))
     stock_quantity = Column(Integer)
     category_id = Column(Integer, ForeignKey("categories.id"))
+    image_url = Column(String)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
     
@@ -31,6 +32,8 @@ class Category(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255))
     products = relationship("Product", backref="category")
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
     
 class Order(Base):
     __tablename__ = "orders"

@@ -7,13 +7,14 @@ class UserCreate(BaseModel):
     password: str
     address: str
 
+class UserUpdate(BaseModel):
+    name: str
+    email: str
+    address: str
+
 
 class StandardResponse(BaseModel):
     message: str
-
-
-class AlternativeResponse(StandardResponse):
-    detail: str
 
 class ErrorResponse(BaseModel):
     detail: str
@@ -24,8 +25,16 @@ class Product(BaseModel):
     price: float
     stock_quantity: int
     category_id: int
-
-
+    image_url: str
+    
+class ProductUpdate(BaseModel):
+    name: str
+    description: str
+    price: float
+    stock_quantity: int
+    category_id: int
+    image_url: str
+    
 class Category(BaseModel):
     name: str
 

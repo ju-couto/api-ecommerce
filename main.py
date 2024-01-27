@@ -1,16 +1,20 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.responses import RedirectResponse
+from routes.users import user_router
+from routes.products import product_router
+from routes.categories import category_router
 
-from routes import user_router, product_router, category_router, order_router, review_router
+
 app = FastAPI()
 router = APIRouter()
 
 @router.get("/")
-def first_api():
-    return {"message": "Hello World!"}
+def redirect_to_docs():
+    return RedirectResponse("/docs")
 
-app.include_router(router=router, prefix="/api/v1")
+app.include_router(router=router)
 app.include_router(router=user_router)
 app.include_router(router=product_router)
 app.include_router(router=category_router)
-app.include_router(router=order_router)
-app.include_router(router=review_router)
+# app.include_router(router=order_router)
+# app.include_router(router=review_router)
