@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy.ext.asyncio import async_session
-from sqlalchemy import delete, select, update
+from sqlalchemy import  select, update
 
 
 from database.models import Product, Category
@@ -10,21 +10,26 @@ from database.connection import async_session
 class ProductService:
     async def create_product(product):
         async with async_session() as session:
-            category_query = select(Category).where(Category.id == product.category_id)
+            category_query = select(Category).where(
+                Category.id == product.category_id)
             db_category = await session.execute(category_query)
             existing_category = db_category.fetchone()
-            
+
             if existing_category is None:
                 raise ValueError("Category does not exist")
-            
-            
+
             product_query = select(Product).where(Product.name == product.name)
             db_products = await session.execute(product_query)
             existing_product = db_products.fetchone()
-            
+
             if existing_product is not None:
                 raise ValueError("Product already exists")
-
+            category_query = select(Category).where(
+                Category.id == product.category_id).where(Category.active == True)
+            db_category = await session.execute(category_query)
+            existing_category = db_category.fetchone()
+            if existing_category is None:
+                raise ValueError("Category does not exist")
 
             new_product = Product(
                 name=product.name,
@@ -35,9 +40,8 @@ class ProductService:
                 stock_quantity=product.stock_quantity,
                 category_id=product.category_id,
                 image_url=product.image_url
-                
+
             )
-                
 
             session.add(new_product)
             await session.commit()
@@ -55,12 +59,12 @@ class ProductService:
 
     async def get_products():
         async with async_session() as session:
-            query = select(Product)
+            query = select(Product).where(Product.active == True)
             db_products = await session.execute(query)
 
             products = db_products.fetchall()
             if not products:
-                raise ValueError("Product does not exist")
+                raise ValueError("There are no products")
             products_data = [product._asdict() for product in products]
             return products_data
 
@@ -74,17 +78,23 @@ class ProductService:
                 raise ValueError("Products of this category does not exist")
             products_data = [product._asdict() for product in products]
             return products_data
-        
-        
+
     async def delete_product(product_id):
         async with async_session() as session:
             query = select(Product).where(Product.id == product_id)
             db_product = await session.execute(query)
+            product = db_product.scalar()
 
-            if not db_product.scalar():
+            if not product:
                 raise ValueError("Product does not exist")
 
-            await session.execute(delete(Product).where(Product.id == product_id))
+            if product.active == False:
+                raise ValueError("Product already deleted")
+
+            await session.execute(update(Product).where(Product.id == product_id).values(
+                active=False,
+                updated_at=datetime.now()
+            ))
             await session.commit()
 
     async def update_product(product_id, product):

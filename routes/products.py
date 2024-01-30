@@ -4,7 +4,7 @@ from schemas import Product, StandardResponse, ErrorResponse
 from services.products import ProductService
 
 
-product_router = APIRouter(prefix="/product")
+product_router = APIRouter(prefix="/products")
 
 
 @product_router.post('', response_model=StandardResponse, responses={400: {"model": ErrorResponse}}, description="Creates a product")

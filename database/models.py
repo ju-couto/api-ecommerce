@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -13,6 +13,7 @@ class User(Base):
     role = Column(String(50), default="user")
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    active = Column(Boolean, default=True)
 
 
 class Product(Base):
@@ -26,6 +27,7 @@ class Product(Base):
     image_url = Column(String)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    active = Column(Boolean, default=True)
     
 class Category(Base):
     __tablename__ = "categories"
@@ -34,16 +36,19 @@ class Category(Base):
     products = relationship("Product", backref="category")
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    active = Column(Boolean, default=True)
     
 class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    order_status = Column(String(50))
+    status = Column(String(50))
+    shipping_cost = Column(DECIMAL(10,2))
     total_amount = Column(DECIMAL(10,2))
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
-    
+
+
 class OrderItem(Base):
     __tablename__ = "order_items"
     id = Column(Integer, primary_key=True, autoincrement=True)

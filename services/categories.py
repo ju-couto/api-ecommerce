@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy.ext.asyncio import async_session
-from sqlalchemy import delete, select, update
+from sqlalchemy import  select, update
 
 
 from database.models import Category
@@ -41,7 +41,7 @@ class CategoryService:
 
     async def get_categories():
         async with async_session() as session:
-            query = select(Category)
+            query = select(Category).where(Category.active == True)
             db_categories = await session.execute(query)
 
             categories = db_categories.fetchall()
@@ -54,11 +54,18 @@ class CategoryService:
         async with async_session() as session:
             query = select(Category).where(Category.id == category_id)
             db_category = await session.execute(query)
+            category = db_category.scalar()
 
-            if not db_category.scalar():
+            if not category:
                 raise ValueError("Category does not exist")
 
-            await session.execute(delete(Category).where(Category.id == category_id))
+            if category.active == False:
+                raise ValueError("Category already deleted")
+
+            await session.execute(update(Category).where(Category.id == category_id).values(
+                active=False,
+                updated_at=datetime.now()
+            ))
             await session.commit()
 
     async def update_category(category_id, category):

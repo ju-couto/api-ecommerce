@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy.ext.asyncio import async_session
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
 import bcrypt
 
 from database.models import User
@@ -46,12 +46,12 @@ class UserService:
 
     async def get_users():
         async with async_session() as session:
-            query = select(User)
+            query = select(User).where(User.active == True)
             db_users = await session.execute(query)
 
             users = db_users.fetchall()
             if not users:
-                raise ValueError("User does not exist")
+                raise ValueError("There are no users")
             users_data = [user._asdict() for user in users]
             return users_data
 
@@ -59,11 +59,18 @@ class UserService:
         async with async_session() as session:
             query = select(User).where(User.id == user_id)
             db_user = await session.execute(query)
+            user = db_user.scalar()
 
-            if not db_user.scalar():
+            if not user:
                 raise ValueError("User does not exist")
 
-            await session.execute(delete(User).where(User.id == user_id))
+            if user.active == False:
+                raise ValueError("User already deleted")
+
+            await session.execute(update(User).where(User.id == user_id).values(
+                active=False,
+                updated_at=datetime.now()
+            ))
             await session.commit()
 
     async def update_user(user_id, user):

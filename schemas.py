@@ -41,16 +41,19 @@ class Category(BaseModel):
 
 class Order(BaseModel):
     user_id: int
-    order_status: str
+    status: str
+    shipping_cost: float
     total_amount: float
 
 
 class OrderItem(BaseModel):
-    order_id: int
     product_id: int
     quantity: int
     price: float
 
+class OrderInput(BaseModel):
+    order: Order
+    order_items: list[OrderItem]
 
 class Review(BaseModel):
     product_id: int
