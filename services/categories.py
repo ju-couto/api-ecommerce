@@ -1,9 +1,9 @@
 from datetime import datetime
 from sqlalchemy.ext.asyncio import async_session
-from sqlalchemy import  select, update
+from sqlalchemy import select, update
 
 
-from database.models import Category
+from database.models import Category, Product
 from database.connection import async_session
 
 
@@ -52,9 +52,15 @@ class CategoryService:
 
     async def delete_category(category_id):
         async with async_session() as session:
-            query = select(Category).where(Category.id == category_id)
-            db_category = await session.execute(query)
+            category_query = select(Category).where(Category.id == category_id)
+            db_category = await session.execute(category_query)
             category = db_category.scalar()
+            products_query = select(Product).where(
+                Product.category_id == category_id)
+            db_products = await session.execute(products_query)
+            products = db_products.fetchall()
+            if products:
+                raise ValueError("Category has products")
 
             if not category:
                 raise ValueError("Category does not exist")

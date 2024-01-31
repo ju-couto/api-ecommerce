@@ -81,27 +81,25 @@ class OrderService:
                                 for order_item in order_itens]
             order_data = order._asdict()
             order_data["order_itens"] = order_itens_data
-            
+
             product_ids = [order_item.product_id for order_item in order_itens]
             products = await session.execute(select(Product).where(Product.id.in_(product_ids)))
             products = products.fetchall()
             products_data = [product._asdict() for product in products]
             order_data["products"] = products_data
-            
 
             return order_data
 
-    # async def get_orders():
-    #     async with async_session() as session:
-    #         query = select(Order)
-    #         db_orders = await session.execute(query)
+    async def get_orders():
+        async with async_session() as session:
+            query = select(Order)
+            db_orders = await session.execute(query)
 
-    #         orders = db_orders.fetchall()
-    #         if not orders:
-    #             raise ValueError("Order does not exist")
-    #         orders_data = [order._asdict() for order in orders]
-    #         return orders_data
-
+            orders = db_orders.fetchall()
+            if not orders:
+                raise ValueError("Order does not exist")
+            orders_data = [order._asdict() for order in orders]
+            return orders_data
 
     # async def update_order(order_id, order):
     #     async with async_session() as session:

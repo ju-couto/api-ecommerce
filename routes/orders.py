@@ -33,13 +33,13 @@ async def get_order(order_id: int):
         raise HTTPException(400, detail=str(e))
 
 
-# @user_router.get("", responses={400: {"model": ErrorResponse}}, description="Returns all users")
-# async def get_users():
-#     try:
-#         users = await UserService.get_users()
-#         return users
-#     except Exception as e:
-#         raise HTTPException(400, detail=str(e))
+@order_router.get("", responses={400: {"model": ErrorResponse}}, description="Returns all orders")
+async def get_orders():
+    try:
+        orders = await OrderService.get_orders()
+        return orders
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
 
 
 # @user_router.put("/{user_id}", response_model=StandardResponse, responses={400: {"model": ErrorResponse}}, description="Updates a user")
