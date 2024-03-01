@@ -45,7 +45,10 @@ class Order(BaseModel):
     shipping_cost: float
     total_amount: float
 
-
+class OrderUpdate(BaseModel):
+    status: str
+    shipping_cost: float
+    
 class OrderItem(BaseModel):
     product_id: int
     quantity: int
@@ -53,6 +56,10 @@ class OrderItem(BaseModel):
 
 class OrderInput(BaseModel):
     order: Order
+    order_items: list[OrderItem]
+    
+class OrderUpdateInput(BaseModel):
+    order : OrderUpdate    
     order_items: list[OrderItem]
 
 class Review(BaseModel):

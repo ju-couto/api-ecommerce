@@ -10,18 +10,18 @@ from database.connection import async_session
 class OrderService:
     async def create_order(order, order_items):
         async with async_session() as session:
-            # Check if the user exists
             existing_user = await session.execute(select(User).where(User.id == order.user_id))
             user = existing_user.scalar()
 
             if user is None:
                 raise ValueError("User does not exist")
-
-            # Create a new order
+            total = order.shipping_cost + \
+                sum([item.price * item.quantity for item in order_items])
             new_order = Order(
                 user_id=order.user_id,
+                # payment_pending, processing, in_transit, cancelled, delivered, returned, payment_failed, refunded
                 status=order.status,
-                total_amount=order.total_amount,
+                total_amount=total,
                 shipping_cost=order.shipping_cost,
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
@@ -31,7 +31,6 @@ class OrderService:
             await session.flush()
 
             for item in order_items:
-                # Fetch the product and check if it exists
                 existing_product = await session.execute(select(Product).where(Product.id == item.product_id))
                 product = existing_product.scalar()
 
@@ -39,12 +38,10 @@ class OrderService:
                     raise ValueError(
                         f"Product with id {item.product_id} does not exist")
 
-                # Check if the product has enough stock
                 if product.stock_quantity < item.quantity:
                     raise ValueError(
                         f"Product with id {item.product_id} does not have enough stock")
 
-                # Create the order item
                 order_item = OrderItem(
                     order_id=new_order.id,
                     product_id=item.product_id,
@@ -56,7 +53,6 @@ class OrderService:
 
                 session.add(order_item)
 
-                # Update the product with the new stock quantity
                 await session.execute(
                     update(Product).where(Product.id == product.id).values(
                         updated_at=datetime.now(),
@@ -81,12 +77,12 @@ class OrderService:
                                 for order_item in order_itens]
             order_data = order._asdict()
             order_data["order_itens"] = order_itens_data
-
-            product_ids = [order_item.product_id for order_item in order_itens]
-            products = await session.execute(select(Product).where(Product.id.in_(product_ids)))
-            products = products.fetchall()
-            products_data = [product._asdict() for product in products]
-            order_data["products"] = products_data
+            if order_itens:
+                product_ids = [order_item.product_id for order_item in order_itens_data]
+                products = await session.execute(select(Product).where(Product.id.in_(product_ids)))
+                products = products.fetchall()
+                products_data = [product._asdict() for product in products]
+                order_data["products"] = products_data
 
             return order_data
 
@@ -101,52 +97,87 @@ class OrderService:
             orders_data = [order._asdict() for order in orders]
             return orders_data
 
-    # async def update_order(order_id, order):
-    #     async with async_session() as session:
-    #         query = select(Order).where(Order.id == order_id)
-    #         db_order = await session.execute(query)
+    async def update_order(order_id, order):
+        async with async_session() as session:
+            query_order = select(Order).where(Order.id == order_id)
+            db_order = await session.execute(query_order)
+            order = db_order.scalar()
+            if not order:
+                raise ValueError("Order does not exist")
+            query_order_items = select(OrderItem).where(OrderItem.order_id == order_id)
+            db_order_items = await session.execute(query_order_items)
+            order_items = db_order_items.fetchall()
+            if not order_items:
+                total = 0
+            else:
+                total = order.shipping_cost + \
+                    sum([item.price * item.quantity for item in order_items])
+                    
+            await session.execute(
+                update(Order).where(Order.id == order_id).values(
+                    status=order.status,
+                    total_amount=total,
+                    shipping_cost=order.shipping_cost,
+                    updated_at=datetime.now()
+                )
+            )
 
-    #         if not db_order.scalar():
-    #             raise ValueError("Order does not exist")
-    #         await session.execute(
-    #             update(Order).where(Order.id == order_id).values(
-    #                 status=order.status,
-    #                 total_amount=order.total_amount,
-    #                 updated_at=datetime.now()
-    #             )
-    #         )
-    #         await session.commit()
+            for item in order.order_items:
+                query = select(OrderItem).where(
+                    OrderItem.id == item.id, OrderItem.product_id == item.product_id)
+                db_order_item = await session.execute(query)
 
-    # async def get_orders_by_user(user_id):
-    #     async with async_session() as session:
-    #         query = select(Order).where(Order.user_id == user_id)
-    #         db_orders = await session.execute(query)
+                if db_order_item.scalar():
+                    await session.execute(
+                        update(OrderItem).where(OrderItem.id == item.id).values(
+                            quantity=item.quantity,
+                            price=item.price,
+                            updated_at=datetime.now()
+                        )
+                    )
+                else:
+                    new_item = OrderItem(
+                        order_id=order_id,
+                        product_id=item.product_id,
+                        quantity=item.quantity,
+                        price=item.price,
+                        created_at=datetime.now(),
+                        updated_at=datetime.now(),
+                    )
+                    await session.add(new_item)
 
-    #         orders = db_orders.fetchall()
-    #         if not orders:
-    #             raise ValueError("Orders does not exist")
-    #         orders_data = [order._asdict() for order in orders]
-    #         return orders_data
+            await session.commit()
 
-    # async def get_orders_by_status(status):
-    #     async with async_session() as session:
-    #         query = select(Order).where(Order.status == status)
-    #         db_orders = await session.execute(query)
+    async def get_orders_by_user(user_id):
+        async with async_session() as session:
+            query = select(Order).where(Order.user_id == user_id)
+            db_orders = await session.execute(query)
 
-    #         orders = db_orders.fetchall()
-    #         if not orders:
-    #             raise ValueError("Orders does not exist")
-    #         orders_data = [order._asdict() for order in orders]
-    #         return orders_data
+            orders = db_orders.fetchall()
+            if not orders:
+                raise ValueError("There are no orders")
+            orders_data = [order._asdict() for order in orders]
+            return orders_data
 
-    # async def get_orders_by_user_and_status(user_id, status):
-    #     async with async_session() as session:
-    #         query = select(Order).where(Order.user_id ==
-    #                                     user_id).where(Order.status == status)
-    #         db_orders = await session.execute(query)
+    async def get_orders_by_status(status):
+        async with async_session() as session:
+            query = select(Order).where(Order.status == status)
+            db_orders = await session.execute(query)
 
-    #         orders = db_orders.fetchall()
-    #         if not orders:
-    #             raise ValueError("Orders does not exist")
-    #         orders_data = [order._asdict() for order in orders]
-    #         return orders_data
+            orders = db_orders.fetchall()
+            if not orders:
+                raise ValueError("Orders does not exist")
+            orders_data = [order._asdict() for order in orders]
+            return orders_data
+
+    async def get_orders_by_user_and_status(user_id, status):
+        async with async_session() as session:
+            query = select(Order).where(Order.user_id ==
+                                        user_id).where(Order.status == status)
+            db_orders = await session.execute(query)
+
+            orders = db_orders.fetchall()
+            if not orders:
+                raise ValueError("Orders does not exist")
+            orders_data = [order._asdict() for order in orders]
+            return orders_data

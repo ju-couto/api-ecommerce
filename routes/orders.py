@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from schemas import Order, StandardResponse, ErrorResponse,OrderInput
+from schemas import Order, StandardResponse, ErrorResponse, OrderInput, OrderUpdateInput
 from services.orders import OrderService
 
 order_router = APIRouter(prefix="/orders")
@@ -13,15 +13,6 @@ async def create_order(order_input: OrderInput):
         return StandardResponse(message="Order created successfully")
     except Exception as error:
         raise HTTPException(400, detail=str(error))
-
-
-# @user_router.delete("/{user_id}", response_model=StandardResponse, responses={400: {"model": ErrorResponse}}, description="Deletes a user")
-# async def delete_user(user_id: int):
-#     try:
-#         await UserService.delete_user(user_id)
-#         return StandardResponse(message="User deleted successfully")
-#     except Exception as e:
-#         raise HTTPException(400, detail=str(e))
 
 
 @order_router.get("/{order_id}", responses={400: {"model": ErrorResponse}}, description="Returns a order")
@@ -42,10 +33,36 @@ async def get_orders():
         raise HTTPException(400, detail=str(e))
 
 
-# @user_router.put("/{user_id}", response_model=StandardResponse, responses={400: {"model": ErrorResponse}}, description="Updates a user")
-# async def update_user(user_id: int, user: UserUpdate):
-#     try:
-#         await UserService.update_user(user_id, user)
-#         return StandardResponse(message="User updated successfully")
-#     except Exception as e:
-#         raise HTTPException(400, detail=str(e))
+@order_router.get('/user/{user_id}', responses={400: {"model": ErrorResponse}}, description="Returns all orders by user")
+async def get_orders_by_user(user_id: int):
+    try:
+        orders = await OrderService.get_orders_by_user(user_id)
+        return orders
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@order_router.get('/status/{status}', responses={400: {"model": ErrorResponse}}, description="Returns all orders by status")
+async def get_orders_by_status(status: str):
+    try:
+        orders = await OrderService.get_orders_by_status(status)
+        return orders
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@order_router.get('/user/{user_id}/status/{status}', responses={400: {"model": ErrorResponse}}, description="Returns all orders by user and status")
+async def get_orders_by_user_and_status(user_id: int, status: str):
+    try:
+        orders = await OrderService.get_orders_by_user_and_status(user_id, status)
+        return orders
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+    
+@order_router.put("/{order_id}", response_model=StandardResponse, responses={400: {"model": ErrorResponse}}, description="Updates a order")
+async def update_order(order_id: int, order: OrderUpdateInput):
+    try:
+        await OrderService.update_order(order_id, order)
+        return StandardResponse(message="Order updated successfully")
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
